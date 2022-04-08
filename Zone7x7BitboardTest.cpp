@@ -1,5 +1,7 @@
 #include "Zone7x7Bitboard.h"
+#include <string>
 #include <sstream>
+#include <functional>
 
 int main(int argc, const char* argv[]) {
 	using board = Zone7x7Bitboard;
