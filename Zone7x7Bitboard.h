@@ -216,17 +216,6 @@ protected:
 			// no break
 		case 7: x = transpose(x);
 			return x;
-		// for XMTMTMTM series
-//		case 3: z = transpose(z);
-//		case 4: z = flip(z);
-//		case 1: z = mirror(z);
-//			return z;
-//		case 2: z = transpose(z);
-//		case 5: z = flip(z);
-//			return z;
-//		case 6: z = flip(z);
-//		case 7: z = transpose(z);
-//			return z;
 		}
 	}
 	static inline constexpr void store_isomorphisms(u64 x, u64 iso[]) {
