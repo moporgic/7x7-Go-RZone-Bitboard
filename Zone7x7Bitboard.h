@@ -144,30 +144,30 @@ protected:
 	}
 	static inline constexpr u64 flip(u64 x) {
 
-//      (1)      (2)                        (3)      (4)
-//		00000000 00000000 01000000 BAAAAAAA 00000000 00000000
-//		G0000000 00000000 00000000 AABBBBBB A0000000 A0000000
-//		FFGGGGGG 00000000 00010000 000AAAAA BBAAAAAA BBAAAAAA
-//		EEEFFFFF EEE00000 00000000 EEEE0000 AAABBBBB 000BBBBB
-//		DDDDEEEE 0000EEEE 00000000 00000EEE 0000AAAA 00000000
-//		CCCCCDDD 00000000 00000000 00000000 EEEEE000 EEEEE000
-//		BBBBBBCC BBBBBB00 00000000 BBBBBBB0 000000EE 000000EE
-//		AAAAAAAB AAAAAAAB 01000000 0AAAAAAA 00000000 00000000
+//      (1)               (2)                                                   (3)               (4)
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   B A A A A A A A   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+//		G 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   A A B B B B B B   A 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0
+//		F F G G G G G G   0 0 0 0 0 0 0 0   0 0 0 1 0 0 0 0   0 0 0 A A A A A   B B A A A A A A   B B A A A A A A
+//		E E E F F F F F   E E E 0 0 0 0 0   0 0 0 0 0 0 0 0   E E E E 0 0 0 0   A A A B B B B B   0 0 0 B B B B B
+//		D D D D E E E E   0 0 0 0 E E E E   0 0 0 0 0 0 0 0   0 0 0 0 0 E E E   0 0 0 0 A A A A   0 0 0 0 0 0 0 0
+//		C C C C C D D D   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   E E E E E 0 0 0   E E E E E 0 0 0
+//		B B B B B B C C   B B B B B B 0 0   0 0 0 0 0 0 0 0   B B B B B B B 0   0 0 0 0 0 0 E E   0 0 0 0 0 0 E E
+//		A A A A A A A B   A A A A A A A B   0 1 0 0 0 0 0 0   0 A A A A A A A   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
 
 		u64 p = x; // (1)
 		p = p & 0x00000007f0003fffull; // (2)
 		p = p * 0x0200080000000002ull >> 15; // (3)
 		p = p & 0x0001fff8001fc000ull; // (4)
 
-//      (5)      (6)      (7)                        (8)      (9)
-//		00000000 00000000 00000000 01000000 0LLLLLLL 00000000 00000000
-//		G0000000 K0000000 00000000 00000000 KK000000 00000000 00000000
-//		FFGGGGGG MMKKKKKK 00000000 00000000 MMMKKKKK 00000000 00000000
-//		000FFFFF 000MMMMM KKK00000 00000000 KKKKMMMM LLL00000 LLL00000
-//		00000000 00000000 MMMMKKKK 00000000 MMMMMKKK 0000LLLL 0000LLLL
-//		CCCCC000 LLLLL000 00000MMM 00000000 LLLLLLMM KKKKK000 00000000
-//		000000CC 000000LL 00000000 00000001 0000000L MMMMMMKK MMMMMM00
-//		00000000 00000000 LLLLLLL0 01000000 0LLLLLLL KKKKKKKM KKKKKKKM
+//      (5)               (6)               (7)                                                   (8)               (9)
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   0 L L L L L L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
+//		G 0 0 0 0 0 0 0   K 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   K K 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
+//		F F G G G G G G   M M K K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
+//		0 0 0 F F F F F   0 0 0 M M M M M   K K K 0 0 0 0 0   0 0 0 0 0 0 0 0   K K K K M M M M   L L L 0 0 0 0 0   L L L 0 0 0 0 0 
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M M K K K K   0 0 0 0 0 0 0 0   M M M M M K K K   0 0 0 0 L L L L   0 0 0 0 L L L L 
+//		C C C C C 0 0 0   L L L L L 0 0 0   0 0 0 0 0 M M M   0 0 0 0 0 0 0 0   L L L L L L M M   K K K K K 0 0 0   0 0 0 0 0 0 0 0 
+//		0 0 0 0 0 0 C C   0 0 0 0 0 0 L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 1   0 0 0 0 0 0 0 L   M M M M M M K K   M M M M M M 0 0 
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   L L L L L L L 0   0 1 0 0 0 0 0 0   0 L L L L L L L   K K K K K K K M   K K K K K K K M 
 
 		u64 q = x; // (1)
 		q = q & 0x0001fff8001fc000ull; // (5)
@@ -177,15 +177,15 @@ protected:
 		p = p * 0x0200000000008002ull >> 29; // (8)
 		p = p & 0x00000007f0003fffull; // (9)
 
-//      (10)     (11)
-//		00000000 00000000
-//		K0000000 A0000000
-//		MMKKKKKK BBAAAAAA
-//		LLLMMMMM CCCBBBBB
-//		0000LLLL DDDDCCCC
-//		LLLLL000 EEEEEDDD
-//		MMMMMMLL FFFFFFEE
-//		KKKKKKKM GGGGGGGF
+//      (10)              (11)
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
+//		K 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0 
+//		M M K K K K K K   B B A A A A A A 
+//		L L L M M M M M   C C C B B B B B 
+//		0 0 0 0 L L L L   D D D D C C C C 
+//		L L L L L 0 0 0   E E E E E D D D 
+//		M M M M M M L L   F F F F F F E E 
+//		K K K K K K K M   G G G G G G G F 
 
 		u64 z = p | q; // (10)
 		return x ^ z; // (11)
