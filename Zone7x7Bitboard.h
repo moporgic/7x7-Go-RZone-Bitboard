@@ -24,6 +24,17 @@ public:
 	inline constexpr Zone7x7Bitboard operator ^(const Zone7x7Bitboard& z) const { return {zone ^ z.zone, black ^ z.black, white ^ z.white}; }
 	inline constexpr Zone7x7Bitboard operator ~() const { return {~zone & (-1ull >> 15), ~black & (-1ull >> 15), ~white & (-1ull >> 15)}; }
 
+	inline constexpr Zone7x7Bitboard& operator &=(u64 x) { return operator =(operator &(x)); }
+	inline constexpr Zone7x7Bitboard& operator |=(u64 x) { return operator =(operator |(x)); }
+	inline constexpr Zone7x7Bitboard& operator ^=(u64 x) { return operator =(operator ^(x)); }
+	inline constexpr Zone7x7Bitboard& operator <<=(u32 i) { return operator =(operator <<(i)); }
+	inline constexpr Zone7x7Bitboard& operator >>=(u32 i) { return operator =(operator >>(i)); }
+	inline constexpr Zone7x7Bitboard operator &(u64 x) const { return {zone & x, black & x, white & x}; }
+	inline constexpr Zone7x7Bitboard operator |(u64 x) const { return {zone | x, black | x, white | x}; }
+	inline constexpr Zone7x7Bitboard operator ^(u64 x) const { return {zone ^ x, black ^ x, white ^ x}; }
+	inline constexpr Zone7x7Bitboard operator <<(u32 i) const { return {zone << i, black << i, white << i}; }
+	inline constexpr Zone7x7Bitboard operator >>(u32 i) const { return {zone >> i, black >> i, white >> i}; }
+
 	inline constexpr bool operator ==(const Zone7x7Bitboard& z) const { return (zone == z.zone) & (black == z.black) & (white == z.white); }
 	inline constexpr bool operator < (const Zone7x7Bitboard& z) const { return (zone < z.zone) ? true : ((black < z.black) ? true : (white < z.white)); }
 	inline constexpr bool operator !=(const Zone7x7Bitboard& z) const { return !(*this == z); }
