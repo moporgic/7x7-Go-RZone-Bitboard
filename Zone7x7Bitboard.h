@@ -79,72 +79,34 @@ public:
 		black = mirror(black);
 		white = mirror(white);
 	}
-	inline constexpr void isomorphize(u32 i) {
+	inline constexpr void transform(u32 i) {
 		zone = Isomorphisms::transform(zone, i);
 		black = Isomorphisms::transform(black, i);
 		white = Isomorphisms::transform(white, i);
 	}
 
 public:
-	struct Isomorphisms {
-		u64 iso[8];
-		inline constexpr Isomorphisms(u64 x) : iso{} {
-			iso[0] = x;
-			iso[1] = flip(iso[0]);
-			iso[2] = transpose(iso[1]);
-			iso[3] = flip(iso[2]);
-			iso[4] = transpose(iso[3]);
-			iso[5] = flip(iso[4]);
-			iso[6] = transpose(iso[5]);
-			iso[7] = flip(iso[6]);
+	inline constexpr void minimize() {
+		u32 offset = 0;
+		if ((zone & 0b1111111000000000000000000000000000000000000000000ull) == 0) {
+			offset += ((__builtin_ctzll(zone | (1ull << 49)) / 7 ?: 1) - 1) * 7;
 		}
-		static inline constexpr u64 transform(u64 x, u32 i) {
-			switch (i % 8) {
-			default:
-			case 0: return x;
-			case 6: x = transpose(x);
-			case 1: x = flip(x);
-			        return x;
-			case 4: x = flip(x);
-			case 5: x = mirror(x);
-			        return x;
-			case 3: x = mirror(x);
-			case 2: x = flip(x);
-			case 7: x = transpose(x);
-			        return x;
-			}
+		if ((zone & 0b1000000100000010000001000000100000010000001000000ull) == 0) {
+			u64 squz = zone;
+			squz = squz | (squz >> 21);
+			squz = squz | (squz >> 14);
+			squz = squz | (squz >> 7);
+			offset += ((__builtin_ctzll(squz | (0b10000000)) ?: 1) - 1);
 		}
-		inline constexpr u64& operator[] (u32 i) { return iso[i]; }
-		inline constexpr const u64& operator[] (u32 i) const { return iso[i]; }
-		inline constexpr u64* begin() { return iso; }
-		inline constexpr const u64* begin() const { return iso; }
-		inline constexpr u64* end() { return iso + 8; }
-		inline constexpr const u64* end() const { return iso + 8; }
-	};
-
-public:
-	inline constexpr void minimize(bool isomorphic = true) {
-		if (isomorphic) {
-			Isomorphisms isoz = zone, isob = black, isow = white;
-			minimize(false);
-			for (u32 i = 1; i < 8; i++) {
-				Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
-				iso.minimize(false);
-				if (iso < *this) *this = iso;
-			}
-		} else {
-			u32 offset = 0;
-			if ((zone & 0b1111111000000000000000000000000000000000000000000ull) == 0) {
-				offset += ((__builtin_ctzll(zone | (1ull << 49)) / 7 ?: 1) - 1) * 7;
-			}
-			if ((zone & 0b1000000100000010000001000000100000010000001000000ull) == 0) {
-				u64 squz = zone;
-				squz = squz | (squz >> 21);
-				squz = squz | (squz >> 14);
-				squz = squz | (squz >> 7);
-				offset += ((__builtin_ctzll(squz | (0b10000000)) ?: 1) - 1);
-			}
-			*this >>= offset;
+		*this >>= offset;
+	}
+	inline constexpr void normalize() {
+		Isomorphisms isoz = zone, isob = black, isow = white;
+		minimize();
+		for (u32 i = 1; i < 8; i++) {
+			Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
+			iso.minimize();
+			if (iso < *this) *this = iso;
 		}
 	}
 
@@ -232,14 +194,50 @@ protected:
 		return z;
 	}
 
+	struct Isomorphisms {
+		u64 iso[8];
+		inline constexpr Isomorphisms(u64 x) : iso{} {
+			iso[0] = x;
+			iso[1] = flip(iso[0]);
+			iso[2] = transpose(iso[1]);
+			iso[3] = flip(iso[2]);
+			iso[4] = transpose(iso[3]);
+			iso[5] = flip(iso[4]);
+			iso[6] = transpose(iso[5]);
+			iso[7] = flip(iso[6]);
+		}
+		static inline constexpr u64 transform(u64 x, u32 i) {
+			switch (i % 8) {
+			default:
+			case 0: return x;
+			case 6: x = transpose(x);
+			case 1: x = flip(x);
+			        return x;
+			case 4: x = flip(x);
+			case 5: x = mirror(x);
+			        return x;
+			case 3: x = mirror(x);
+			case 2: x = flip(x);
+			case 7: x = transpose(x);
+			        return x;
+			}
+		}
+		inline constexpr u64& operator[] (u32 i) { return iso[i]; }
+		inline constexpr const u64& operator[] (u32 i) const { return iso[i]; }
+		inline constexpr u64* begin() { return iso; }
+		inline constexpr const u64* begin() const { return iso; }
+		inline constexpr u64* end() { return iso + 8; }
+		inline constexpr const u64* end() const { return iso + 8; }
+	};
+
 public:
 	friend std::ostream& operator <<(std::ostream& out, const Zone7x7Bitboard& z) {
 		const bool print_axis_label = false;
 		const bool print_extra_space = true;
 		const char* symbol[] = {"\u00B7", "\u25CF", "\u25CB", "\u00A0"}; // empty, black, white, irrelevant
 		const char* border = print_extra_space ? "+-------------+" : "+-------+";
-		const char* border_left = print_axis_label ? " " : "";
-		out << border_left << border << std::endl;
+		const char* padding = print_axis_label ? " " : "";
+		out << padding << border << std::endl;
 		for (int y = 6; y >= 0; y--) {
 			if (print_axis_label) out << char('1' + y);
 			out << '|';
@@ -249,7 +247,7 @@ public:
 			}
 			out << '|' << std::endl;
 		}
-		out << border_left << border << std::endl;
+		out << padding << border << std::endl;
 		if (print_axis_label) out << "  A B C D E F G " << std::endl;
 		return out;
 	}

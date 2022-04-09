@@ -18,7 +18,7 @@ int main(int argc, const char* argv[]) {
 		// 	std::cout << std::endl;
 		// }
 		board s = {where, black, white}, z = s;
-		z.minimize();
+		z.normalize();
 		std::stringstream ss, sz;
 		ss << s;
 		sz << z;
