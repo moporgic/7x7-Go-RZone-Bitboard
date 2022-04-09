@@ -36,7 +36,9 @@ public:
 	inline constexpr Zone7x7Bitboard operator >>(u32 i) const { return {zone >> i, black >> i, white >> i}; }
 
 	inline constexpr bool operator ==(const Zone7x7Bitboard& z) const { return (zone == z.zone) & (black == z.black) & (white == z.white); }
-	inline constexpr bool operator < (const Zone7x7Bitboard& z) const { return (zone < z.zone) ? true : ((black < z.black) ? true : (white < z.white)); }
+	inline constexpr bool operator < (const Zone7x7Bitboard& z) const {
+		return (zone != z.zone) ? (zone < z.zone) : ((black != z.black) ? (black < z.black) : (white < z.white));
+	}
 	inline constexpr bool operator !=(const Zone7x7Bitboard& z) const { return !(*this == z); }
 	inline constexpr bool operator > (const Zone7x7Bitboard& z) const { return  (z < *this); }
 	inline constexpr bool operator <=(const Zone7x7Bitboard& z) const { return !(z < *this); }
