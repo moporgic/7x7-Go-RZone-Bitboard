@@ -3,27 +3,21 @@
 #include <sstream>
 #include <functional>
 
-int main(int argc, const char* argv[]) {
-	using board = Zone7x7Bitboard;
-	using u64 = board::u64;
+using board = Zone7x7Bitboard;
+using u64 = board::u64;
 
-	board s;
-	auto bits = [](u64 x) -> std::string {
-		std::stringstream ss;
-		int n = 0;
-		do {
-			ss << ((x & 1) ? '1' : '0');
-			if (++n % 7 == 0) ss << ' ';
-		} while ((x >>= 1) != 0);
-		return ss.str();
-	};
+int main(int argc, const char* argv[]) {
 	u64 where, black, white;
 	while (std::cin >> where >> black >> white) {
-		std::cout << bits(where) << std::endl;
-		std::cout << bits(black) << std::endl;
-		std::cout << bits(white) << std::endl;
-		s = {where, black, white};
-		board z = s;
+		// for (u64 x : {where, black, white}) {
+		// 	int n = 0;
+		// 	do {
+		// 		std::cout << ((x & 1) ? '1' : '0');
+		// 		if (++n % 7 == 0) std::cout << ' ';
+		// 	} while ((x >>= 1) != 0);
+		// 	std::cout << std::endl;
+		// }
+		board s = {where, black, white}, z = s;
 		z.minimize();
 		std::stringstream ss, sz;
 		ss << s;

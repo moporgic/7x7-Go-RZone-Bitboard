@@ -22,10 +22,10 @@ public:
 	inline constexpr Zone7x7Bitboard operator &(const Zone7x7Bitboard& z) const { return {zone & z.zone, black & z.black, white & z.white}; }
 	inline constexpr Zone7x7Bitboard operator |(const Zone7x7Bitboard& z) const { return {zone | z.zone, black | z.black, white | z.white}; }
 	inline constexpr Zone7x7Bitboard operator ^(const Zone7x7Bitboard& z) const { return {zone ^ z.zone, black ^ z.black, white ^ z.white}; }
-	inline constexpr Zone7x7Bitboard operator ~() const { return {~zone, ~black, ~white}; }
+	inline constexpr Zone7x7Bitboard operator ~() const { return {~zone & (-1ull >> 15), ~black & (-1ull >> 15), ~white & (-1ull >> 15)}; }
 
 	inline constexpr bool operator ==(const Zone7x7Bitboard& z) const { return (zone == z.zone) & (black == z.black) & (white == z.white); }
-	inline constexpr bool operator < (const Zone7x7Bitboard& z) const { return (zone <  z.zone) | (black <  z.black) | (white <  z.white); }
+	inline constexpr bool operator < (const Zone7x7Bitboard& z) const { return (zone < z.zone) ? true : ((black < z.black) ? true : (white < z.white)); }
 	inline constexpr bool operator !=(const Zone7x7Bitboard& z) const { return !(*this == z); }
 	inline constexpr bool operator > (const Zone7x7Bitboard& z) const { return  (z < *this); }
 	inline constexpr bool operator <=(const Zone7x7Bitboard& z) const { return !(z < *this); }
@@ -33,44 +33,21 @@ public:
 
 public:
 	enum PieceType {
-		ZONE_EMPTY = 0u,
-		ZONE_BLACK = 1u,
-		ZONE_WHITE = 2u,
-		ZONE_UNKNOWN = 3u,
-		IRRELEVANT = -1u,
+		ZONE_EMPTY   = 0b000u,
+		ZONE_BLACK   = 0b001u,
+		ZONE_WHITE   = 0b010u,
+		ZONE_UNKNOWN = 0b011u,
+		IRRELEVANT   = 0b100u,
 	};
 	inline constexpr PieceType get(u32 x, u32 y) const {
 		u64 mask = 1ull << (y * 7 + x);
-		if ((zone & mask) == 0) return PieceType::IRRELEVANT;
-		return static_cast<PieceType>(
-				(black & mask ? PieceType::ZONE_BLACK : PieceType::ZONE_EMPTY) |
-				(white & mask ? PieceType::ZONE_WHITE : PieceType::ZONE_EMPTY));
+		return static_cast<PieceType>((black & mask ? 1 : 0) | (white & mask ? 2 : 0) | (zone & mask ? 0 : 4));
 	}
 	inline constexpr void set(u32 x, u32 y, u32 type) {
 		u64 mask = 1ull << (y * 7 + x);
-		switch (type) {
-		case PieceType::ZONE_EMPTY:
-			zone |= mask;
-			black &= ~mask;
-			white &= ~mask;
-			break;
-		case PieceType::ZONE_BLACK:
-			zone |= mask;
-			black |= mask;
-			white &= ~mask;
-			break;
-		case PieceType::ZONE_WHITE:
-			zone |= mask;
-			black &= ~mask;
-			white |= mask;
-			break;
-		default:
-		case PieceType::IRRELEVANT:
-			zone &= ~mask;
-			black &= ~mask;
-			white &= ~mask;
-			break;
-		}
+		black = (type & PieceType::ZONE_BLACK) ? (black | mask) : (black & ~mask);
+		white = (type & PieceType::ZONE_WHITE) ? (white | mask) : (white & ~mask);
+		zone  = (type & PieceType::IRRELEVANT) ? (zone & ~mask) : (zone | mask);
 	}
 
 public:
@@ -90,15 +67,51 @@ public:
 		white = mirror(white);
 	}
 	inline constexpr void isomorphize(u32 i) {
-		zone = isomorphize(zone, i);
-		black = isomorphize(black, i);
-		white = isomorphize(white, i);
+		zone = Isomorphisms::transform(zone, i);
+		black = Isomorphisms::transform(black, i);
+		white = Isomorphisms::transform(white, i);
 	}
 
 public:
+	struct Isomorphisms {
+		u64 iso[8];
+		inline constexpr Isomorphisms(u64 x) : iso{} {
+			iso[0] = x;
+			iso[1] = flip(iso[0]);
+			iso[2] = transpose(iso[1]);
+			iso[3] = flip(iso[2]);
+			iso[4] = transpose(iso[3]);
+			iso[5] = flip(iso[4]);
+			iso[6] = transpose(iso[5]);
+			iso[7] = flip(iso[6]);
+		}
+		static inline constexpr u64 transform(u64 x, u32 i) {
+			switch (i % 8) {
+			default:
+			case 0: return x;
+			case 6: x = transpose(x);
+			case 1: x = flip(x);
+			        return x;
+			case 4: x = flip(x);
+			case 5: x = mirror(x);
+			        return x;
+			case 3: x = mirror(x);
+			case 2: x = flip(x);
+			case 7: x = transpose(x);
+			        return x;
+			}
+		}
+		inline constexpr u64& operator[] (u32 i) { return iso[i]; }
+		inline constexpr const u64& operator[] (u32 i) const { return iso[i]; }
+		inline constexpr u64* begin() { return iso; }
+		inline constexpr const u64* begin() const { return iso; }
+		inline constexpr u64* end() { return iso + 8; }
+		inline constexpr const u64* end() const { return iso + 8; }
+	};
+
+public:
 	inline constexpr void minimize() {
-		u64 ziso[8] = {};
-		store_isomorphisms(zone, ziso);
+		Isomorphisms ziso = zone;
 		u32 min = 0;
 		u32 offset = calculate_offset(zone);
 		zone >>= offset;
@@ -111,21 +124,21 @@ public:
 				zone = ziso[i];
 			}
 		}
-		black = isomorphize(black, min) >> offset;
-		white = isomorphize(white, min) >> offset;
+		black = Isomorphisms::transform(black, min) >> offset;
+		white = Isomorphisms::transform(white, min) >> offset;
 	}
 
 protected:
 	static inline constexpr u64 transpose(u64 x) {
 
-//		(1)             (2)             (3)             (4)             (5)
-//		q r s t u v w   q<l>s t u<p>w  <e>l s t<i>p w   e l s<b>i p w  <G N U>b i p w
-//		j k l m n o p  <d>k<r>m<h>o<v>  d k r<a>h o v   d k r a h o v  <F M T>a h o v
-//		c d e f g h i   c<j>e<Z>g<n>i   c j<q>Z g n<u>  c j q Z g n u  <E L S>Z g n u
-//		V W X Y Z a b   V W<R>Y<f>a b   V<K>R Y f<m>b  <D>K R Y f m<t>  D K R Y f m t
-//		O P Q R S T U   O<J>Q<X>S<N>U  <C>J Q X<G>N U   C J Q X G N U   C J Q X<e l s>
-//		H I J K L M N  <B>I<P>K<F>M<T>  B I P<W>F M T   B I P W F M T   B I P W<d k r>
-//		A B C D E F G   A<H>C D E<L>G   A H<O>D E L<S>  A H O<V>E L S   A H O V<c j q>
+//		(1)                             (2)                             (3)                             (4)                             (5)
+//		q r s t u v w   0 1 0 0 0 1 0   q l s t u p w   1 0 0 0 1 0 0   e l s t i p w   0 0 0 1 0 0 0   e l s b i p w   1 1 1 0 0 0 0   G N U b i p w
+//		j k l m n o p   1 0 * 0 1 0 *   d k r m h o v   0 0 0 1 0 0 0   d k r a h o v   0 0 0 0 0 0 0   d k r a h o v   1 1 1 0 0 0 0   F M T a h o v
+//		c d e f g h i   0 * 0 1 0 * 0   c j e Z g n i   0 0 * 0 0 0 *   c j q Z g n u   0 0 0 0 0 0 0   c j q Z g n u   1 1 1 0 0 0 0   E L S Z g n u
+//		V W X Y Z a b   0 0 1 0 * 0 0   V W R Y f a b   0 1 0 0 0 * 0   V K R Y f m b   1 0 0 0 0 0 *   D K R Y f m t   0 0 0 0 0 0 0   D K R Y f m t
+//		O P Q R S T U   0 1 0 * 0 1 0   O J Q X S N U   1 0 0 0 1 0 0   C J Q X G N U   0 0 0 0 0 0 0   C J Q X G N U   0 0 0 0 * * *   C J Q X e l s
+//		H I J K L M N   1 0 * 0 1 0 *   B I P K F M T   0 0 0 * 0 0 0   B I P W F M T   0 0 0 0 0 0 0   B I P W F M T   0 0 0 0 * * *   B I P W d k r
+//		A B C D E F G   0 * 0 0 0 * 0   A H C D E L G   0 0 * 0 0 0 *   A H O D E L S   0 0 0 * 0 0 0   A H O V E L S   0 0 0 0 * * *   A H O V c j q
 
 		u64 z = x; // (1)
 		z = z ^ (z << 6);
@@ -160,14 +173,14 @@ protected:
 		p = p & 0x0001fff8001fc000ull; // (4)
 
 //      (5)               (6)               (7)                                                   (8)               (9)
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   0 L L L L L L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
-//		G 0 0 0 0 0 0 0   K 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   K K 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
-//		F F G G G G G G   M M K K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
-//		0 0 0 F F F F F   0 0 0 M M M M M   K K K 0 0 0 0 0   0 0 0 0 0 0 0 0   K K K K M M M M   L L L 0 0 0 0 0   L L L 0 0 0 0 0 
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M M K K K K   0 0 0 0 0 0 0 0   M M M M M K K K   0 0 0 0 L L L L   0 0 0 0 L L L L 
-//		C C C C C 0 0 0   L L L L L 0 0 0   0 0 0 0 0 M M M   0 0 0 0 0 0 0 0   L L L L L L M M   K K K K K 0 0 0   0 0 0 0 0 0 0 0 
-//		0 0 0 0 0 0 C C   0 0 0 0 0 0 L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 1   0 0 0 0 0 0 0 L   M M M M M M K K   M M M M M M 0 0 
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   L L L L L L L 0   0 1 0 0 0 0 0 0   0 L L L L L L L   K K K K K K K M   K K K K K K K M 
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   0 L L L L L L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+//		G 0 0 0 0 0 0 0   K 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   K K 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+//		F F G G G G G G   M M K K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+//		0 0 0 F F F F F   0 0 0 M M M M M   K K K 0 0 0 0 0   0 0 0 0 0 0 0 0   K K K K M M M M   L L L 0 0 0 0 0   L L L 0 0 0 0 0
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M M K K K K   0 0 0 0 0 0 0 0   M M M M M K K K   0 0 0 0 L L L L   0 0 0 0 L L L L
+//		C C C C C 0 0 0   L L L L L 0 0 0   0 0 0 0 0 M M M   0 0 0 0 0 0 0 0   L L L L L L M M   K K K K K 0 0 0   0 0 0 0 0 0 0 0
+//		0 0 0 0 0 0 C C   0 0 0 0 0 0 L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 1   0 0 0 0 0 0 0 L   M M M M M M K K   M M M M M M 0 0
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   L L L L L L L 0   0 1 0 0 0 0 0 0   0 L L L L L L L   K K K K K K K M   K K K K K K K M
 
 		u64 q = x; // (1)
 		q = q & 0x0001fff8001fc000ull; // (5)
@@ -178,14 +191,14 @@ protected:
 		p = p & 0x00000007f0003fffull; // (9)
 
 //      (10)              (11)
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0 
-//		K 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0 
-//		M M K K K K K K   B B A A A A A A 
-//		L L L M M M M M   C C C B B B B B 
-//		0 0 0 0 L L L L   D D D D C C C C 
-//		L L L L L 0 0 0   E E E E E D D D 
-//		M M M M M M L L   F F F F F F E E 
-//		K K K K K K K M   G G G G G G G F 
+//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+//		K 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0
+//		M M K K K K K K   B B A A A A A A
+//		L L L M M M M M   C C C B B B B B
+//		0 0 0 0 L L L L   D D D D C C C C
+//		L L L L L 0 0 0   E E E E E D D D
+//		M M M M M M L L   F F F F F F E E
+//		K K K K K K K M   G G G G G G G F
 
 		u64 z = p | q; // (10)
 		return x ^ z; // (11)
@@ -198,67 +211,33 @@ protected:
 		}
 		return z;
 	}
-	static inline constexpr u64 isomorphize(u64 x, u32 i) {
-		switch (i % 8) {
-		default:
-		case 0:
-			return x;
-		case 6: x = transpose(x);
-			// no break
-		case 1: x = flip(x);
-			return x;
-		case 4: x = flip(x);
-			// no break
-		case 5: x = mirror(x);
-			return x;
-		case 3: x = mirror(x);
-			// no break
-		case 2: x = flip(x);
-			// no break
-		case 7: x = transpose(x);
-			return x;
-		}
-	}
-	static inline constexpr void store_isomorphisms(u64 x, u64 iso[]) {
-		iso[0] = x;
-		iso[1] = flip(iso[0]);
-		iso[2] = transpose(iso[1]);
-		iso[3] = flip(iso[2]);
-		iso[4] = transpose(iso[3]);
-		iso[5] = flip(iso[4]);
-		iso[6] = transpose(iso[5]);
-		iso[7] = flip(iso[6]);
-	}
 	static inline constexpr u32 calculate_offset(u64 x) {
-		u32 offset = 0;
-		if (x >> 42 == 0) offset += (std::max<u32>(tzcnt49(x) / 7, 1) - 1) * 7;
 		u64 z = transpose(x);
-		if (z >> 42 == 0) offset += (std::max<u32>(tzcnt49(z) / 7, 1) - 1);
+		u32 offset = 0;
+		if ((x & (0b1111111ull << 42)) == 0) offset += ((__builtin_ctzll(x | (1ull << 49)) / 7 ?: 1) - 1) * 7;
+		if ((z & (0b1111111ull << 42)) == 0) offset += ((__builtin_ctzll(z | (1ull << 49)) / 7 ?: 1) - 1);
 		return offset;
-	}
-	static inline constexpr u32 tzcnt49(u64 x) {
-		return __builtin_ctzll(x | (1ull << 49));
 	}
 
 public:
 	friend std::ostream& operator <<(std::ostream& out, const Zone7x7Bitboard& z) {
-		bool show_label = false;
-		bool extra_space = true;
-		const char* print[] = {"\u00B7", "\u25CF", "\u25CB", "\u00A0"};
-		const char* border = extra_space ? "+-------------+" : "+-------+";
-		const char* border_left = show_label ? " " : "";
+		const bool print_axis_label = false;
+		const bool print_extra_space = true;
+		const char* symbol[] = {"\u00B7", "\u25CF", "\u25CB", "\u00A0"}; // empty, black, white, irrelevant
+		const char* border = print_extra_space ? "+-------------+" : "+-------+";
+		const char* border_left = print_axis_label ? " " : "";
 		out << border_left << border << std::endl;
 		for (int y = 6; y >= 0; y--) {
-			if (show_label) out << char('1' + y);
+			if (print_axis_label) out << char('1' + y);
 			out << '|';
 			for (int x = 0; x < 7; x++) {
-				out << print[z.get(x, y) & 3];
-				if (x != 6 && extra_space) out << ' ';
+				out << symbol[std::min<u32>(z.get(x, y), 3)];
+				if (x != 6 && print_extra_space) out << ' ';
 			}
 			out << '|' << std::endl;
 		}
 		out << border_left << border << std::endl;
-		if (show_label) out << "  A B C D E F G " << std::endl;
+		if (print_axis_label) out << "  A B C D E F G " << std::endl;
 		return out;
 	}
 };
