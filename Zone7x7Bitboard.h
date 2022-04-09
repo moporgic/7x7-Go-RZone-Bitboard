@@ -123,22 +123,29 @@ public:
 	};
 
 public:
-	inline constexpr void minimize() {
-		Isomorphisms ziso = zone;
-		u32 min = 0;
-		u32 offset = calculate_offset(zone);
-		zone >>= offset;
-		for (u32 i = 1; i < 8; i++) {
-			u32 ofiso = calculate_offset(ziso[i]);
-			ziso[i] >>= ofiso;
-			if (ziso[i] < zone) {
-				min = i;
-				offset = ofiso;
-				zone = ziso[i];
+	inline constexpr void minimize(bool isomorphic = true) {
+		if (isomorphic) {
+			Isomorphisms isoz = zone, isob = black, isow = white;
+			minimize(false);
+			for (u32 i = 1; i < 8; i++) {
+				Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
+				iso.minimize(false);
+				if (iso < *this) *this = iso;
 			}
+		} else {
+			u32 offset = 0;
+			if ((zone & 0b1111111000000000000000000000000000000000000000000ull) == 0) {
+				offset += ((__builtin_ctzll(zone | (1ull << 49)) / 7 ?: 1) - 1) * 7;
+			}
+			if ((zone & 0b1000000100000010000001000000100000010000001000000ull) == 0) {
+				u64 squz = zone;
+				squz = squz | (squz >> 21);
+				squz = squz | (squz >> 14);
+				squz = squz | (squz >> 7);
+				offset += ((__builtin_ctzll(squz | (0b10000000)) ?: 1) - 1);
+			}
+			*this >>= offset;
 		}
-		black = Isomorphisms::transform(black, min) >> offset;
-		white = Isomorphisms::transform(white, min) >> offset;
 	}
 
 protected:
@@ -223,13 +230,6 @@ protected:
 			z |= (x & (0b1000000100000010000001000000100000010000001000000ull >> i)) >> (6 - i * 2);
 		}
 		return z;
-	}
-	static inline constexpr u32 calculate_offset(u64 x) {
-		u64 z = transpose(x);
-		u32 offset = 0;
-		if ((x & (0b1111111ull << 42)) == 0) offset += ((__builtin_ctzll(x | (1ull << 49)) / 7 ?: 1) - 1) * 7;
-		if ((z & (0b1111111ull << 42)) == 0) offset += ((__builtin_ctzll(z | (1ull << 49)) / 7 ?: 1) - 1);
-		return offset;
 	}
 
 public:
