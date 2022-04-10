@@ -394,18 +394,43 @@ public:
 	 */
 	friend std::ostream& operator <<(std::ostream& out, const Zone7x7Bitboard& z) {
 		const bool axis = true;
-		const char* symbol[] = {"\u00B7", "\u25CF", "\u25CB", "\u00A0"}; // empty, black, white, irrelevant
-		out << (axis ? " " : "") << "+---------------+" << std::endl;
+
+		const char* symbol[] = {"\u00B7", "\u25CF", "\u25CB", "\u00A0"}; // empty  black  white  irrelevant
+		const char* corner[] = {"┌", "┏", "┐", "┓", "└", "┗", "┘", "┛"}; // top-left{normal, bold}  top-right{}  bottom-left{}  bottom-right{}
+		const char* border[] = {"─", "━", "│", "┃"}; // horizontal{normal, bold}  vertical{}
+
+		bool zone[8][7] = {};
+		for (int y = 0; y < 7; y++) {
+			for (int x = 0; x < 7; x++) {
+				zone[x][y] = (z.get(x, y) & PieceType::IRRELEVANT) != PieceType::IRRELEVANT;
+			}
+			zone[7][y] = zone[6][y];
+		}
+
+		if (axis) out << " ";
+		out << corner[0 + zone[0][6]] << border[0 + zone[0][6]];
+		for (int x = 0; x < 7; x++) {
+			out << border[0 + zone[x][6]] << border[0 + (zone[x][6] | zone[x + 1][6])];
+		}
+		out << corner[2 + zone[6][6]] << std::endl;
+
 		for (int y = 6; y >= 0; y--) {
 			if (axis) out << char('1' + y);
-			out << '|' << ' ';
+			out << border[2 + zone[0][y]] << " ";
 			for (int x = 0; x < 7; x++) {
-				out << symbol[std::min<u32>(z.get(x, y), 3)] << ' ';
+				out << symbol[std::min<u32>(z.get(x, y), 3)] << " ";
 			}
-			out << '|' << std::endl;
+			out << border[2 + zone[6][y]] << std::endl;
 		}
-		out << (axis ? " " : "") << "+---------------+" << std::endl;
+
+		if (axis) out << " ";
+		out << corner[4 + zone[0][0]] << border[0 + zone[0][0]];
+		for (int x = 0; x < 7; x++) {
+			out << border[0 + zone[x][0]] << border[0 + (zone[x][0] | zone[x + 1][0])];
+		}
+		out << corner[6 + zone[6][0]] << std::endl;
 		if (axis) out << "   A B C D E F G  " << std::endl;
+
 		return out;
 	}
 };
