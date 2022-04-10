@@ -393,27 +393,29 @@ public:
 	 *  the given ostream (out)
 	 */
 	friend std::ostream& operator <<(std::ostream& out, const Zone7x7Bitboard& z) {
-		const bool axis = true;
+		const bool axis = true; // whether to print axis labels (A-G, 1-7)
 
 		const char* symbol[] = {"\u00B7", "\u25CF", "\u25CB", "\u00A0"}; // empty  black  white  irrelevant
-		const char* corner[] = {"┌", "┏", "┐", "┓", "└", "┗", "┘", "┛"}; // top-left{normal, bold}  top-right{}  bottom-left{}  bottom-right{}
-		const char* border[] = {"─", "━", "│", "┃"}; // horizontal{normal, bold}  vertical{}
+		const char* corner[] = {"\u250C", "\u250F", "\u2510", "\u2513",  // top-left{normal, bold}  top-right{normal, bold}
+		                        "\u2514", "\u2517", "\u2518", "\u251B"}; // bottom-left{normal, bold}  bottom-right{normal, bold}
+		const char* border[] = {"\u2500", "\u2501", "\u2502", "\u2503"}; // horizontal{normal, bold}  vertical{normal, bold}
 
-		bool zone[8][7] = {};
+		// gather r-zone info
+		bool zone[7][7] = {};
 		for (int y = 0; y < 7; y++) {
 			for (int x = 0; x < 7; x++) {
 				zone[x][y] = (z.get(x, y) & PieceType::IRRELEVANT) != PieceType::IRRELEVANT;
 			}
-			zone[7][y] = zone[6][y];
 		}
 
-		if (axis) out << " ";
-		out << corner[0 + zone[0][6]] << border[0 + zone[0][6]];
-		for (int x = 0; x < 7; x++) {
-			out << border[0 + zone[x][6]] << border[0 + (zone[x][6] | zone[x + 1][6])];
+		// print top border
+		out << (axis ? " " : "") << corner[0 + zone[0][6]];
+		for (int last = zone[0][6], x = 0; x < 7; last = zone[x++][6]) {
+			out << border[0 + (zone[x][6] | last)] << border[0 + zone[x][6]];
 		}
-		out << corner[2 + zone[6][6]] << std::endl;
+		out << border[0 + zone[6][6]] << corner[2 + zone[6][6]] << std::endl;
 
+		// print left border, pieces, and right border (row by row)
 		for (int y = 6; y >= 0; y--) {
 			if (axis) out << char('1' + y);
 			out << border[2 + zone[0][y]] << " ";
@@ -423,12 +425,12 @@ public:
 			out << border[2 + zone[6][y]] << std::endl;
 		}
 
-		if (axis) out << " ";
-		out << corner[4 + zone[0][0]] << border[0 + zone[0][0]];
-		for (int x = 0; x < 7; x++) {
-			out << border[0 + zone[x][0]] << border[0 + (zone[x][0] | zone[x + 1][0])];
+		// print bottom border
+		out << (axis ? " " : "") << corner[4 + zone[0][0]];
+		for (int last = zone[0][0], x = 0; x < 7; last = zone[x++][0]) {
+			out << border[0 + (zone[x][0] | last)] << border[0 + zone[x][0]];
 		}
-		out << corner[6 + zone[6][0]] << std::endl;
+		out << border[0 + zone[6][0]] << corner[6 + zone[6][0]] << std::endl;
 		if (axis) out << "   A B C D E F G  " << std::endl;
 
 		return out;
