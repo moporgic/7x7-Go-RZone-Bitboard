@@ -2,14 +2,29 @@
 #include <iostream>
 #include <algorithm>
 
+/**
+ * bitboard for 7x7 Go R-Zone
+ */
 class Zone7x7Bitboard {
 public:
 	using u64 = unsigned long long int;
 	using u32 = unsigned int;
 
-	u64 zone;
-	u64 black;
-	u64 white;
+//	bitboard definition
+//	 +-------------+
+//	7|             |
+//	6|             |
+//	5|             |
+//	4|             |
+//	3|             |
+//	2|             |
+//	1|lowest       |
+//	 +-------------+
+//	  A B C D E F G
+
+	u64 zone; // zone-relevant pieces
+	u64 black; // black pieces in zone
+	u64 white; // white pieces in zone
 
 public:
 	inline constexpr Zone7x7Bitboard(u64 zone = 0, u64 black = 0, u64 white = 0) : zone(zone), black(black), white(white) {}
@@ -46,16 +61,31 @@ public:
 
 public:
 	enum PieceType {
-		ZONE_EMPTY   = 0b000u,
-		ZONE_BLACK   = 0b001u,
-		ZONE_WHITE   = 0b010u,
-		ZONE_UNKNOWN = 0b011u,
-		IRRELEVANT   = 0b100u,
+		ZONE_EMPTY   = 0b000u, // an empty cell inside the zone
+		ZONE_BLACK   = 0b001u, // a black stone inside the zone
+		ZONE_WHITE   = 0b010u, // a white stone inside the zone
+		ZONE_UNKNOWN = 0b011u, // an unknown cell inside the zone
+		IRRELEVANT   = 0b100u, // a cell not relevant to the zone
 	};
+	/**
+	 * get the piece at (x, y)
+	 * @param
+	 *  x the x-axis position (A-G) in decimal number (0-6)
+	 *  y the y-axis position (1-7) in decimal number (0-6)
+	 * @return
+	 *  the piece at (x, y) in PieceType format
+	 */
 	inline constexpr PieceType get(u32 x, u32 y) const {
 		u64 mask = 1ull << (y * 7 + x);
 		return static_cast<PieceType>((black & mask ? 1 : 0) | (white & mask ? 2 : 0) | (zone & mask ? 0 : 4));
 	}
+	/**
+	 * set the piece at (x, y)
+	 * @param
+	 *  x the x-axis position (A-G) in decimal number (0-6)
+	 *  y the y-axis position (1-7) in decimal number (0-6)
+	 *  type the PieceType to be set
+	 */
 	inline constexpr void set(u32 x, u32 y, u32 type) {
 		u64 mask = 1ull << (y * 7 + x);
 		black = (type & PieceType::ZONE_BLACK) ? (black | mask) : (black & ~mask);
@@ -64,21 +94,35 @@ public:
 	}
 
 public:
+	/**
+	 * transpose this board (reflection line is A1 - G7)
+	 */
 	inline constexpr void transpose() {
 		zone = transpose(zone);
 		black = transpose(black);
 		white = transpose(white);
 	}
+	/**
+	 * flip this board (reflection line is A4 - G4)
+	 */
 	inline constexpr void flip() {
 		zone = flip(zone);
 		black = flip(black);
 		white = flip(white);
 	}
+	/**
+	 * mirror this board (reflection line is D1 - D7)
+	 */
 	inline constexpr void mirror() {
 		zone = mirror(zone);
 		black = mirror(black);
 		white = mirror(white);
 	}
+	/**
+	 * transform this board to a specific isomorphic form
+	 * @param
+	 *  i the isomorphic id number: [0, 8)
+	 */
 	inline constexpr void transform(u32 i) {
 		zone = Isomorphisms::transform(zone, i);
 		black = Isomorphisms::transform(black, i);
@@ -86,6 +130,52 @@ public:
 	}
 
 public:
+	/**
+	 * minimize this board, shift all the pieces as close to the origin (A1) as possible
+	 * if the structure touches the X-axis (or Y-axis) border,
+	 * its result also touches the X-axis (or Y-axis) border, vise versa.
+	 *
+	 * e.g.,
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |        ●    |     |    ●        |
+	 * |             |     |             |   |      · · ○  |     |  · · ○      |
+	 * |             |     |             |   |        ·    |     |    ·        |
+	 * |             | >>> |             | ; |             | >>> |             |
+	 * |        ●    |     |    ●        |   |             |     |             |
+	 * |      · · ○  |     |  · · ○      |   |             |     |             |
+	 * |        ·    |     |    ·        |   |             |     |             |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 *
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |             |     |             |
+	 * |  ●          |     |             |   |          ●  |     |             |
+	 * |· · ○        |     |             |   |        · · ○|     |             |
+	 * |  ·          | >>> |  ●          | ; |          ·  | >>> |          ●  |
+	 * |             |     |· · ○        |   |             |     |        · · ○|
+	 * |             |     |  ·          |   |             |     |          ·  |
+	 * |             |     |             |   |             |     |             |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 *
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |          ●  |     |          ●  |
+	 * |             |     |             |   |        · · ○|     |        · · ○|
+	 * |             |     |             |   |          ·  |     |          ·  |
+	 * |             | >>> |             | ; |             | >>> |             |
+	 * |          ●  |     |          ●  |   |             |     |             |
+	 * |        · · ○|     |        · · ○|   |             |     |             |
+	 * |          ·  |     |          ·  |   |             |     |             |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 *
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |             |     |             |
+	 * |        ●    |     |             |   |             |     |             |
+	 * |      · · ○  |     |             |   |        ●    |     |             |
+	 * |        ·    | >>> |    ●        | ; |      · · ○  | >>> |    ●        |
+	 * |             |     |  · · ○      |   |        ·    |     |  · · ○      |
+	 * |             |     |    ·        |   |             |     |    ·        |
+	 * |             |     |             |   |             |     |             |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 */
 	inline constexpr void minimize() {
 		u32 offset = 0;
 		if ((zone & 0b1111111000000000000000000000000000000000000000000ull) == 0) {
@@ -100,6 +190,51 @@ public:
 		}
 		*this >>= offset;
 	}
+	/**
+	 * normalize this board to the minimized board in all isomorphisms
+	 * see minimize() and operator<() for the details of minimization and comparison
+	 *
+	 * e.g.,
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |        ●    |     |             |
+	 * |             |     |             |   |      · · ○  |     |             |
+	 * |             |     |             |   |        ·    |     |             |
+	 * |             | >>> |             | ; |             | >>> |             |
+	 * |        ●    |     |    ●        |   |             |     |    ·        |
+	 * |      · · ○  |     |  ○ · ·      |   |             |     |  ○ · ·      |
+	 * |        ·    |     |    ·        |   |             |     |    ●        |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 *
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |             |     |             |
+	 * |  ●          |     |             |   |          ●  |     |             |
+	 * |· · ○        |     |             |   |        · · ○|     |             |
+	 * |  ·          | >>> |             | ; |          ·  | >>> |             |
+	 * |             |     |    ○        |   |             |     |    ·        |
+	 * |             |     |  ● · ·      |   |             |     |  ● · ·      |
+	 * |             |     |    ·        |   |             |     |    ○        |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 *
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |          ●  |     |             |
+	 * |             |     |             |   |        · · ○|     |             |
+	 * |             |     |             |   |          ·  |     |             |
+	 * |             | >>> |             | ; |             | >>> |             |
+	 * |          ●  |     |  ·          |   |             |     |  ·          |
+	 * |        · · ○|     |· · ●        |   |             |     |○ · ·        |
+	 * |          ·  |     |  ○          |   |             |     |  ●          |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 *
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 * |             |     |             |   |             |     |             |
+	 * |        ●    |     |             |   |             |     |             |
+	 * |      · · ○  |     |             |   |        ●    |     |             |
+	 * |        ·    | >>> |    ·        | ; |      · · ○  | >>> |    ·        |
+	 * |             |     |  ○ · ·      |   |        ·    |     |  ○ · ·      |
+	 * |             |     |    ●        |   |             |     |    ●        |
+	 * |             |     |             |   |             |     |             |
+	 * +-------------+     +-------------+   +-------------+     +-------------+
+	 */
 	inline constexpr void normalize() {
 		Isomorphisms isoz = zone, isob = black, isow = white;
 		minimize();
@@ -111,17 +246,18 @@ public:
 	}
 
 protected:
+	/**
+	 * 	transpose the given 49-bit board
+	 * 	(1)                             (2)                             (3)                             (4)                             (5)
+	 * 	q r s t u v w   0 1 0 0 0 1 0   q l s t u p w   1 0 0 0 1 0 0   e l s t i p w   0 0 0 1 0 0 0   e l s b i p w   1 1 1 0 0 0 0   G N U b i p w
+	 * 	j k l m n o p   1 0 * 0 1 0 *   d k r m h o v   0 0 0 1 0 0 0   d k r a h o v   0 0 0 0 0 0 0   d k r a h o v   1 1 1 0 0 0 0   F M T a h o v
+	 * 	c d e f g h i   0 * 0 1 0 * 0   c j e Z g n i   0 0 * 0 0 0 *   c j q Z g n u   0 0 0 0 0 0 0   c j q Z g n u   1 1 1 0 0 0 0   E L S Z g n u
+	 * 	V W X Y Z a b   0 0 1 0 * 0 0   V W R Y f a b   0 1 0 0 0 * 0   V K R Y f m b   1 0 0 0 0 0 *   D K R Y f m t   0 0 0 0 0 0 0   D K R Y f m t
+	 * 	O P Q R S T U   0 1 0 * 0 1 0   O J Q X S N U   1 0 0 0 1 0 0   C J Q X G N U   0 0 0 0 0 0 0   C J Q X G N U   0 0 0 0 * * *   C J Q X e l s
+	 * 	H I J K L M N   1 0 * 0 1 0 *   B I P K F M T   0 0 0 * 0 0 0   B I P W F M T   0 0 0 0 0 0 0   B I P W F M T   0 0 0 0 * * *   B I P W d k r
+	 * 	A B C D E F G   0 * 0 0 0 * 0   A H C D E L G   0 0 * 0 0 0 *   A H O D E L S   0 0 0 * 0 0 0   A H O V E L S   0 0 0 0 * * *   A H O V c j q
+	 */
 	static inline constexpr u64 transpose(u64 x) {
-
-//		(1)                             (2)                             (3)                             (4)                             (5)
-//		q r s t u v w   0 1 0 0 0 1 0   q l s t u p w   1 0 0 0 1 0 0   e l s t i p w   0 0 0 1 0 0 0   e l s b i p w   1 1 1 0 0 0 0   G N U b i p w
-//		j k l m n o p   1 0 * 0 1 0 *   d k r m h o v   0 0 0 1 0 0 0   d k r a h o v   0 0 0 0 0 0 0   d k r a h o v   1 1 1 0 0 0 0   F M T a h o v
-//		c d e f g h i   0 * 0 1 0 * 0   c j e Z g n i   0 0 * 0 0 0 *   c j q Z g n u   0 0 0 0 0 0 0   c j q Z g n u   1 1 1 0 0 0 0   E L S Z g n u
-//		V W X Y Z a b   0 0 1 0 * 0 0   V W R Y f a b   0 1 0 0 0 * 0   V K R Y f m b   1 0 0 0 0 0 *   D K R Y f m t   0 0 0 0 0 0 0   D K R Y f m t
-//		O P Q R S T U   0 1 0 * 0 1 0   O J Q X S N U   1 0 0 0 1 0 0   C J Q X G N U   0 0 0 0 0 0 0   C J Q X G N U   0 0 0 0 * * *   C J Q X e l s
-//		H I J K L M N   1 0 * 0 1 0 *   B I P K F M T   0 0 0 * 0 0 0   B I P W F M T   0 0 0 0 0 0 0   B I P W F M T   0 0 0 0 * * *   B I P W d k r
-//		A B C D E F G   0 * 0 0 0 * 0   A H C D E L G   0 0 * 0 0 0 *   A H O D E L S   0 0 0 * 0 0 0   A H O V E L S   0 0 0 0 * * *   A H O V c j q
-
 		u64 z = x; // (1)
 		z = z ^ (z << 6);
 		z = z & 0b0100010001000100010000000100010001000100010000000ull;
@@ -137,32 +273,43 @@ protected:
 		x = x ^ (z | (z >> 24)); // (5)
 		return x;
 	}
+	/**
+	 * 	flip the given 49-bit board
+	 * 	(1)               (2)                                                   (3)               (4)
+	 * 	0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   B A A A A A A A   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+	 * 	G 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   A A B B B B B B   A 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0
+	 * 	F F G G G G G G   0 0 0 0 0 0 0 0   0 0 0 1 0 0 0 0   0 0 0 A A A A A   B B A A A A A A   B B A A A A A A
+	 * 	E E E F F F F F   E E E 0 0 0 0 0   0 0 0 0 0 0 0 0   E E E E 0 0 0 0   A A A B B B B B   0 0 0 B B B B B
+	 * 	D D D D E E E E   0 0 0 0 E E E E   0 0 0 0 0 0 0 0   0 0 0 0 0 E E E   0 0 0 0 A A A A   0 0 0 0 0 0 0 0
+	 * 	C C C C C D D D   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   E E E E E 0 0 0   E E E E E 0 0 0
+	 * 	B B B B B B C C   B B B B B B 0 0   0 0 0 0 0 0 0 0   B B B B B B B 0   0 0 0 0 0 0 E E   0 0 0 0 0 0 E E
+	 * 	A A A A A A A B   A A A A A A A B   0 1 0 0 0 0 0 0   0 A A A A A A A   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+	 *
+	 * 	(5)               (6)               (7)                                                   (8)               (9)
+	 * 	0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   0 L L L L L L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+	 * 	G 0 0 0 0 0 0 0   K 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   K K 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+	 * 	F F G G G G G G   M M K K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+	 * 	0 0 0 F F F F F   0 0 0 M M M M M   K K K 0 0 0 0 0   0 0 0 0 0 0 0 0   K K K K M M M M   L L L 0 0 0 0 0   L L L 0 0 0 0 0
+	 * 	0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M M K K K K   0 0 0 0 0 0 0 0   M M M M M K K K   0 0 0 0 L L L L   0 0 0 0 L L L L
+	 * 	C C C C C 0 0 0   L L L L L 0 0 0   0 0 0 0 0 M M M   0 0 0 0 0 0 0 0   L L L L L L M M   K K K K K 0 0 0   0 0 0 0 0 0 0 0
+	 * 	0 0 0 0 0 0 C C   0 0 0 0 0 0 L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 1   0 0 0 0 0 0 0 L   M M M M M M K K   M M M M M M 0 0
+	 * 	0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   L L L L L L L 0   0 1 0 0 0 0 0 0   0 L L L L L L L   K K K K K K K M   K K K K K K K M
+	 *
+	 * 	(10)              (11)
+	 * 	0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
+	 * 	K 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0
+	 * 	M M K K K K K K   B B A A A A A A
+	 * 	L L L M M M M M   C C C B B B B B
+	 * 	0 0 0 0 L L L L   D D D D C C C C
+	 * 	L L L L L 0 0 0   E E E E E D D D
+	 * 	M M M M M M L L   F F F F F F E E
+	 * 	K K K K K K K M   G G G G G G G F
+	 */
 	static inline constexpr u64 flip(u64 x) {
-
-//      (1)               (2)                                                   (3)               (4)
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   B A A A A A A A   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-//		G 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   A A B B B B B B   A 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0
-//		F F G G G G G G   0 0 0 0 0 0 0 0   0 0 0 1 0 0 0 0   0 0 0 A A A A A   B B A A A A A A   B B A A A A A A
-//		E E E F F F F F   E E E 0 0 0 0 0   0 0 0 0 0 0 0 0   E E E E 0 0 0 0   A A A B B B B B   0 0 0 B B B B B
-//		D D D D E E E E   0 0 0 0 E E E E   0 0 0 0 0 0 0 0   0 0 0 0 0 E E E   0 0 0 0 A A A A   0 0 0 0 0 0 0 0
-//		C C C C C D D D   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   E E E E E 0 0 0   E E E E E 0 0 0
-//		B B B B B B C C   B B B B B B 0 0   0 0 0 0 0 0 0 0   B B B B B B B 0   0 0 0 0 0 0 E E   0 0 0 0 0 0 E E
-//		A A A A A A A B   A A A A A A A B   0 1 0 0 0 0 0 0   0 A A A A A A A   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-
 		u64 p = x; // (1)
 		p = p & 0x00000007f0003fffull; // (2)
 		p = p * 0x0200080000000002ull >> 15; // (3)
 		p = p & 0x0001fff8001fc000ull; // (4)
-
-//      (5)               (6)               (7)                                                   (8)               (9)
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 1 0 0 0 0 0 0   0 L L L L L L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-//		G 0 0 0 0 0 0 0   K 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   K K 0 0 0 0 0 0   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-//		F F G G G G G G   M M K K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M K K K K K   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-//		0 0 0 F F F F F   0 0 0 M M M M M   K K K 0 0 0 0 0   0 0 0 0 0 0 0 0   K K K K M M M M   L L L 0 0 0 0 0   L L L 0 0 0 0 0
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   M M M M K K K K   0 0 0 0 0 0 0 0   M M M M M K K K   0 0 0 0 L L L L   0 0 0 0 L L L L
-//		C C C C C 0 0 0   L L L L L 0 0 0   0 0 0 0 0 M M M   0 0 0 0 0 0 0 0   L L L L L L M M   K K K K K 0 0 0   0 0 0 0 0 0 0 0
-//		0 0 0 0 0 0 C C   0 0 0 0 0 0 L L   0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 1   0 0 0 0 0 0 0 L   M M M M M M K K   M M M M M M 0 0
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0   L L L L L L L 0   0 1 0 0 0 0 0 0   0 L L L L L L L   K K K K K K K M   K K K K K K K M
 
 		u64 q = x; // (1)
 		q = q & 0x0001fff8001fc000ull; // (5)
@@ -172,28 +319,35 @@ protected:
 		p = p * 0x0200000000008002ull >> 29; // (8)
 		p = p & 0x00000007f0003fffull; // (9)
 
-//      (10)              (11)
-//		0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-//		K 0 0 0 0 0 0 0   A 0 0 0 0 0 0 0
-//		M M K K K K K K   B B A A A A A A
-//		L L L M M M M M   C C C B B B B B
-//		0 0 0 0 L L L L   D D D D C C C C
-//		L L L L L 0 0 0   E E E E E D D D
-//		M M M M M M L L   F F F F F F E E
-//		K K K K K K K M   G G G G G G G F
-
 		u64 z = p | q; // (10)
 		return x ^ z; // (11)
 	}
+	/**
+	 * 	mirror the given 49-bit board
+	 * 	                (1)             (2)             (3)             (4)             (5)             (6)             (7)
+	 * 	q r s t u v w   0 0 0 t 0 0 0   0 0 0 t s 0 0   0 0 u t s 0 0   0 0 u t s r 0   0 v u t s r 0   0 v u t s r q   w v u t s r q
+	 * 	j k l m n o p   0 0 0 m 0 0 0   0 0 0 m l 0 0   0 0 n m l 0 0   0 0 n m l k 0   0 o n m l k 0   0 o n m l k j   p o n m l k j
+	 * 	c d e f g h i   0 0 0 f 0 0 0   0 0 0 f e 0 0   0 0 g f e 0 0   0 0 g f e d 0   0 h g f e d 0   0 h g f e d c   i h g f e d c
+	 * 	V W X Y Z a b   0 0 0 Y 0 0 0   0 0 0 Y X 0 0   0 0 Z Y X 0 0   0 0 Z Y X W 0   0 a Z Y X W 0   0 a Z Y X W V   b a Z Y X W V
+	 * 	O P Q R S T U   0 0 0 R 0 0 0   0 0 0 R Q 0 0   0 0 S R Q 0 0   0 0 S R Q P 0   0 T S R Q P 0   0 T S R Q P O   U T S R Q P O
+	 * 	H I J K L M N   0 0 0 K 0 0 0   0 0 0 K J 0 0   0 0 L K J 0 0   0 0 L K J I 0   0 M L K J I 0   0 M L K J I H   N M L K J I H
+	 * 	A B C D E F G   0 0 0 D 0 0 0   0 0 0 D C 0 0   0 0 E D C 0 0   0 0 E D C B 0   0 F E D C B 0   0 F E D C B A   G F E D C B A
+	 */
 	static inline constexpr u64 mirror(u64 x) {
-		u64 z = x & 0b0001000000100000010000001000000100000010000001000ull;
-		for (u32 i = 0; i < 3; i++) {
-			z |= (x & (0b0000001000000100000010000001000000100000010000001ull << i)) << (6 - i * 2);
-			z |= (x & (0b1000000100000010000001000000100000010000001000000ull >> i)) >> (6 - i * 2);
-		}
+		u64 z = (x & 0b0001000000100000010000001000000100000010000001000ull); // (1)
+		z = z | (x & 0b0000100000010000001000000100000010000001000000100ull) << 2; // (2)
+		z = z | (x & 0b0010000001000000100000010000001000000100000010000ull) >> 2; // (3)
+		z = z | (x & 0b0000010000001000000100000010000001000000100000010ull) << 4; // (4)
+		z = z | (x & 0b0100000010000001000000100000010000001000000100000ull) >> 4; // (5)
+		z = z | (x & 0b0000001000000100000010000001000000100000010000001ull) << 6; // (6)
+		z = z | (x & 0b1000000100000010000001000000100000010000001000000ull) >> 6; // (7)
 		return z;
 	}
-
+	/**
+	 * generate all isomorphisms of a given 64-bit 7x7 board by flip/transpose consecutively
+	 * note that the output of transform(x, i) is the ith isomorphism in iso[], i.e., Isomorphisms(x)[i]
+	 * transform(x, i) may be more efficient when only several isomorphisms are needed
+	 */
 	struct Isomorphisms {
 		u64 iso[8];
 		inline constexpr Isomorphisms(u64 x) : iso{} {
@@ -231,6 +385,14 @@ protected:
 	};
 
 public:
+	/**
+	 * print the given board to the given ostream
+	 * @param
+	 *  out the ostream to print
+	 *  z   the board to be printed
+	 * @return
+	 *  the given ostream (out)
+	 */
 	friend std::ostream& operator <<(std::ostream& out, const Zone7x7Bitboard& z) {
 		const bool print_axis_label = false;
 		const bool print_extra_space = true;
