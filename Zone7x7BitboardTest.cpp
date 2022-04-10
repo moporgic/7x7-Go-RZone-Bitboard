@@ -6,18 +6,35 @@
 using board = Zone7x7Bitboard;
 using u64 = board::u64;
 
+struct number {
+	u64 x;
+	number(u64 x = 0) : x(x) {}
+	operator u64&() { return x; }
+
+	friend std::istream& operator >>(std::istream& in, number&& n) {
+		std::string num;
+		in >> num;
+		if (num.find("0b") == std::string::npos) {
+			try {
+				n.x = std::stoull(num, nullptr, 0);
+			} catch (std::exception&) {
+				in.setstate(std::ios::failbit);
+			}
+		} else {
+			num.erase(0, 2);
+			n.x = 0;
+			for (char digit : num) {
+				n.x = (n.x << 1) | (digit - '0');
+			}
+		}
+		return in;
+	}
+};
+
 int main(int argc, const char* argv[]) {
-	u64 where, black, white;
-	while (std::cin >> where >> black >> white) {
-		// for (u64 x : {where, black, white}) {
-		// 	int n = 0;
-		// 	do {
-		// 		std::cout << ((x & 1) ? '1' : '0');
-		// 		if (++n % 7 == 0) std::cout << ' ';
-		// 	} while ((x >>= 1) != 0);
-		// 	std::cout << std::endl;
-		// }
-		board s = {where, black, white}, z = s;
+	number zone = 0, black = 0, white = 0;
+	while (std::cin >> zone >> black >> white) {
+		board s(zone, black, white), z = s;
 		z.normalize();
 		std::stringstream ss, sz;
 		ss << s;
