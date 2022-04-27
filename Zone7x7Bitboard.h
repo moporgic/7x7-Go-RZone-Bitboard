@@ -189,9 +189,16 @@ public:
 		}
 		*this >>= offset;
 	}
+
+	/**
+	 * set this flag to enable minimization (shifting) during normalization
+	 * see normalize() and minimize() for more details
+	 */
+	static constexpr bool NORMALIZE_WITH_MINIMIZE = false;
 	/**
 	 * normalize this board to the minimized board in all isomorphisms
 	 * see minimize() and operator<() for the details of minimization and comparison
+	 * below are examples when NORMALIZE_WITH_MINIMIZE is true
 	 *
 	 * e.g.,
 	 * +---------------+     +---------------+   +---------------+     +---------------+
@@ -236,10 +243,10 @@ public:
 	 */
 	inline constexpr void normalize() {
 		Isomorphisms isoz = zone, isob = black, isow = white;
-		minimize();
+		if (NORMALIZE_WITH_MINIMIZE) minimize();
 		for (u32 i = 1; i < 8; i++) {
 			Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
-			iso.minimize();
+			if (NORMALIZE_WITH_MINIMIZE) iso.minimize();
 			if (iso < *this) *this = iso;
 		}
 	}
