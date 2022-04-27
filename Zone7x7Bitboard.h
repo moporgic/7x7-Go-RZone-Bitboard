@@ -191,15 +191,11 @@ public:
 	}
 
 	/**
-	 * set this flag to enable minimization (shifting) during normalization
-	 * see normalize() and minimize() for more details
-	 */
-	static constexpr bool NORMALIZE_WITH_MINIMIZE = false;
-	/**
 	 * normalize this board to the minimized board in all isomorphisms
+	 * to also use shifting, i.e., invoke minimize(), with this procedure, #define NORMALIZE_WITH_MINIMIZE
 	 * see minimize() and operator<() for the details of minimization and comparison
-	 * below are examples when NORMALIZE_WITH_MINIMIZE is true
 	 *
+	 * below are examples when macro variable NORMALIZE_WITH_MINIMIZE is defined
 	 * e.g.,
 	 * +---------------+     +---------------+   +---------------+     +---------------+
 	 * |               |     |               |   |         ●     |     |               |
@@ -243,10 +239,14 @@ public:
 	 */
 	inline constexpr void normalize() {
 		Isomorphisms isoz = zone, isob = black, isow = white;
-		if (NORMALIZE_WITH_MINIMIZE) minimize();
+#ifdef NORMALIZE_WITH_MINIMIZE
+		minimize();
+#endif
 		for (u32 i = 1; i < 8; i++) {
 			Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
-			if (NORMALIZE_WITH_MINIMIZE) iso.minimize();
+#ifdef NORMALIZE_WITH_MINIMIZE
+			iso.minimize();
+#endif
 			if (iso < *this) *this = iso;
 		}
 	}
