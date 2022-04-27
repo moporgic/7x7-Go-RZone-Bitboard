@@ -83,7 +83,6 @@ public:
 		ZONE_EMPTY   = 0b000u, // an empty cell inside the zone
 		ZONE_BLACK   = 0b001u, // a black stone inside the zone
 		ZONE_WHITE   = 0b010u, // a white stone inside the zone
-		ZONE_UNKNOWN = 0b011u, // an unknown cell inside the zone
 		IRRELEVANT   = 0b100u, // a cell not relevant to the zone
 	};
 	/**
