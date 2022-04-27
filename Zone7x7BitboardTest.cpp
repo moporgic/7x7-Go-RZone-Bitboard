@@ -3,8 +3,7 @@
 #include <sstream>
 #include <functional>
 
-using board = Zone7x7Bitboard;
-using u64 = board::u64;
+using u64 = Zone7x7Bitboard::u64;
 
 struct number {
 	u64 x;
@@ -34,7 +33,7 @@ struct number {
 int main(int argc, const char* argv[]) {
 	number zone = 0, black = 0, white = 0;
 	while (std::cin >> zone >> black >> white) {
-		board s(zone, black, white), z = s;
+		Zone7x7Bitboard s(zone, black, white), z = s;
 		z.normalize();
 		std::stringstream ss, sz;
 		ss << s;

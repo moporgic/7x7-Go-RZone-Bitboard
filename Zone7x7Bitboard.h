@@ -3,7 +3,7 @@
 #include <algorithm>
 
 /**
- * bitboard for 7x7 Go R-Zone
+ * bitboard for 7x7 Go with R-Zone support
  *
  *  +---------------+
  * 7| + + + + + + + | G7 is the highest bit
@@ -21,12 +21,32 @@ public:
 	using u64 = unsigned long long int;
 	using u32 = unsigned int;
 
-	u64 zone; // zone-relevant pieces
+	u64 zone;  // zone-relevant pieces
 	u64 black; // black pieces in zone
 	u64 white; // white pieces in zone
 
 public:
-	inline constexpr Zone7x7Bitboard(u64 zone = 0, u64 black = 0, u64 white = 0) : zone(zone), black(black), white(white) {}
+	/**
+	 * construct a 7x7 Go bitboard with R-zone and black/white stones
+	 * @param
+	 *  zone  the bitmap of R-zone
+	 *  black the bitmap of black stones
+	 *  white the bitmap of white stones
+	 */
+	inline constexpr Zone7x7Bitboard(u64 zone, u64 black, u64 white) : zone(zone), black(black), white(white) {}
+	/**
+	 * construct a 7x7 Go bitboard with black/white stones, with all 49 locations set as relevant
+	 * @param
+	 *  black the bitmap of black stones
+	 *  white the bitmap of white stones
+	 */
+	inline constexpr Zone7x7Bitboard(u64 black, u64 white) : Zone7x7Bitboard((1ull << 49) - 1, black, white) {}
+	/**
+	 * construct an "irrelevant" empty 7x7 Go bitboard in which R-zone is NOT set
+	 * note: to construct a "relevant" empty board, use Zone7x7Bitboard(0, 0) instead
+	 */
+	inline constexpr Zone7x7Bitboard() : Zone7x7Bitboard(0, 0, 0) {}
+
 	inline constexpr Zone7x7Bitboard(const Zone7x7Bitboard&) = default;
 	inline constexpr Zone7x7Bitboard& operator =(const Zone7x7Bitboard&) = default;
 
