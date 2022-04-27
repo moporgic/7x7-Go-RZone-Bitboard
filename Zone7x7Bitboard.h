@@ -191,62 +191,17 @@ public:
 	}
 
 	/**
-	 * normalize this board to the minimized board in all isomorphisms
-	 * use macro variable BITBOARD_NORMALIZE_WITH_MINIMIZE to enable shifting, i.e., invoke minimize()
+	 * normalize this board to the minimal isomorphisms
 	 * see minimize() and operator<() for the details of minimization and comparison
-	 *
-	 * below are examples when macro variable BITBOARD_NORMALIZE_WITH_MINIMIZE is defined
-	 * e.g.,
-	 * +---------------+     +---------------+   +---------------+     +---------------+
-	 * |               |     |               |   |         ●     |     |               |
-	 * |               |     |               |   |       · · ○   |     |               |
-	 * |               |     |               |   |         ·     |     |               |
-	 * |               | >>> |               | ; |               | >>> |               |
-	 * |         ●     |     |     ●         |   |               |     |     ·         |
-	 * |       · · ○   |     |   ○ · ·       |   |               |     |   ○ · ·       |
-	 * |         ·     |     |     ·         |   |               |     |     ●         |
-	 * +---------------+     +---------------+   +---------------+     +---------------+
-	 *
-	 * +---------------+     +---------------+   +---------------+     +---------------+
-	 * |               |     |               |   |               |     |               |
-	 * |   ●           |     |               |   |           ●   |     |               |
-	 * | · · ○         |     |               |   |         · · ○ |     |               |
-	 * |   ·           | >>> |               | ; |           ·   | >>> |               |
-	 * |               |     |     ○         |   |               |     |     ·         |
-	 * |               |     |   ● · ·       |   |               |     |   ● · ·       |
-	 * |               |     |     ·         |   |               |     |     ○         |
-	 * +---------------+     +---------------+   +---------------+     +---------------+
-	 *
-	 * +---------------+     +---------------+   +---------------+     +---------------+
-	 * |               |     |               |   |           ●   |     |               |
-	 * |               |     |               |   |         · · ○ |     |               |
-	 * |               |     |               |   |           ·   |     |               |
-	 * |               | >>> |               | ; |               | >>> |               |
-	 * |           ●   |     |   ·           |   |               |     |   ·           |
-	 * |         · · ○ |     | · · ●         |   |               |     | ○ · ·         |
-	 * |           ·   |     |   ○           |   |               |     |   ●           |
-	 * +---------------+     +---------------+   +---------------+     +---------------+
-	 *
-	 * +---------------+     +---------------+   +---------------+     +---------------+
-	 * |               |     |               |   |               |     |               |
-	 * |         ●     |     |               |   |               |     |               |
-	 * |       · · ○   |     |               |   |         ●     |     |               |
-	 * |         ·     | >>> |     ·         | ; |       · · ○   | >>> |     ·         |
-	 * |               |     |   ○ · ·       |   |         ·     |     |   ○ · ·       |
-	 * |               |     |     ●         |   |               |     |     ●         |
-	 * |               |     |               |   |               |     |               |
-	 * +---------------+     +---------------+   +---------------+     +---------------+
+	 * @param
+	 *  use_minimize invoke minimize() for all isomorphisms or not, default is false
 	 */
-	inline constexpr void normalize() {
+	inline constexpr void normalize(bool allow_minimize = false) {
 		Isomorphisms isoz = zone, isob = black, isow = white;
-#ifdef BITBOARD_NORMALIZE_WITH_MINIMIZE
-		minimize();
-#endif
+		if (allow_minimize) minimize();
 		for (u32 i = 1; i < 8; i++) {
 			Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
-#ifdef BITBOARD_NORMALIZE_WITH_MINIMIZE
-			iso.minimize();
-#endif
+			if (allow_minimize) iso.minimize();
 			if (iso < *this) *this = iso;
 		}
 	}
