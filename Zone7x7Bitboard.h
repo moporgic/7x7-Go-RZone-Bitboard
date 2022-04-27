@@ -130,7 +130,7 @@ public:
 
 public:
 	/**
-	 * minimize this board, shift all the pieces as close to the origin (A1) as possible
+	 * slide all the pieces as close to the origin (A1) as possible
 	 * if the structure touches the X-axis (or Y-axis) border,
 	 * its result also touches the X-axis (or Y-axis) border, and vise versa.
 	 *
@@ -175,7 +175,7 @@ public:
 	 * |               |     |               |   |               |     |               |
 	 * +---------------+     +---------------+   +---------------+     +---------------+
 	 */
-	inline constexpr void minimize() {
+	inline constexpr void slide() {
 		u32 offset = 0;
 		if ((zone & 0b1111111000000000000000000000000000000000000000000ull) == 0) {
 			offset += ((__builtin_ctzll(zone | (1ull << 49)) / 7 ?: 1) - 1) * 7;
@@ -192,16 +192,16 @@ public:
 
 	/**
 	 * normalize this board to the minimal isomorphisms
-	 * see minimize() and operator<() for the details of minimization and comparison
+	 * see slide() and operator<() for the details of minimization
 	 * @param
-	 *  use_minimize invoke minimize() for all isomorphisms or not, default is false
+	 *  allow_slide set as true to invoke slide() for all isomorphisms, default is false
 	 */
-	inline constexpr void normalize(bool allow_minimize = false) {
+	inline constexpr void normalize(bool allow_slide = false) {
 		Isomorphisms isoz = zone, isob = black, isow = white;
-		if (allow_minimize) minimize();
+		if (allow_slide) slide();
 		for (u32 i = 1; i < 8; i++) {
 			Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
-			if (allow_minimize) iso.minimize();
+			if (allow_slide) iso.slide();
 			if (iso < *this) *this = iso;
 		}
 	}
