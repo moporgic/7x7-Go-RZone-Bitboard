@@ -192,10 +192,10 @@ public:
 
 	/**
 	 * normalize this board to the minimized board in all isomorphisms
-	 * to also use shifting, i.e., invoke minimize(), with this procedure, #define NORMALIZE_WITH_MINIMIZE
+	 * use macro variable BITBOARD_NORMALIZE_WITH_MINIMIZE to enable shifting, i.e., invoke minimize()
 	 * see minimize() and operator<() for the details of minimization and comparison
 	 *
-	 * below are examples when macro variable NORMALIZE_WITH_MINIMIZE is defined
+	 * below are examples when macro variable BITBOARD_NORMALIZE_WITH_MINIMIZE is defined
 	 * e.g.,
 	 * +---------------+     +---------------+   +---------------+     +---------------+
 	 * |               |     |               |   |         ●     |     |               |
@@ -239,12 +239,12 @@ public:
 	 */
 	inline constexpr void normalize() {
 		Isomorphisms isoz = zone, isob = black, isow = white;
-#ifdef NORMALIZE_WITH_MINIMIZE
+#ifdef BITBOARD_NORMALIZE_WITH_MINIMIZE
 		minimize();
 #endif
 		for (u32 i = 1; i < 8; i++) {
 			Zone7x7Bitboard iso(isoz[i], isob[i], isow[i]);
-#ifdef NORMALIZE_WITH_MINIMIZE
+#ifdef BITBOARD_NORMALIZE_WITH_MINIMIZE
 			iso.minimize();
 #endif
 			if (iso < *this) *this = iso;
