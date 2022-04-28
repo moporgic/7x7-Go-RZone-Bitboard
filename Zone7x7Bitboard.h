@@ -3,10 +3,10 @@
 #include <algorithm>
 
 /**
- * bitboard for 7x7 Go with R-Zone support
+ * Bitboard for 7x7 Go with R-Zone support
  *
  *  +---------------+
- * 7| + + + + + + + | G7 is the highest bit
+ * 7| + + + + + + + | G7 is the highest bit, i.e., the 49th low bit
  * 6| + + + + + + + |
  * 5| + + + + + + + |
  * 4| + + + + + + + |
@@ -27,7 +27,7 @@ public:
 
 public:
 	/**
-	 * construct a 7x7 Go bitboard with R-zone and black/white stones
+	 * construct a bitboard with R-zone and black/white stones
 	 * @param
 	 *  zone  the bitmap of R-zone
 	 *  black the bitmap of black stones
@@ -35,14 +35,14 @@ public:
 	 */
 	inline constexpr Zone7x7Bitboard(u64 zone, u64 black, u64 white) : zone(zone), black(black), white(white) {}
 	/**
-	 * construct a 7x7 Go bitboard with black/white stones, with all 49 locations set as relevant
+	 * construct a bitboard with black/white stones, with all 49 locations set as relevant
 	 * @param
 	 *  black the bitmap of black stones
 	 *  white the bitmap of white stones
 	 */
 	inline constexpr Zone7x7Bitboard(u64 black, u64 white) : Zone7x7Bitboard((1ull << 49) - 1, black, white) {}
 	/**
-	 * construct an "irrelevant" empty 7x7 Go bitboard in which R-zone is NOT set
+	 * construct an empty bitboard, with all 49 locations set as irrelevant
 	 * note: to construct a "relevant" empty board, use Zone7x7Bitboard(0, 0) instead
 	 */
 	inline constexpr Zone7x7Bitboard() : Zone7x7Bitboard(0, 0, 0) {}
@@ -80,13 +80,15 @@ public:
 
 public:
 	enum PieceType {
-		ZONE_EMPTY   = 0b000u, // an empty cell inside the zone
-		ZONE_BLACK   = 0b001u, // a black stone inside the zone
-		ZONE_WHITE   = 0b010u, // a white stone inside the zone
-		IRRELEVANT   = 0b100u, // a cell not relevant to the zone
+		ZONE_EMPTY = 0b000u, // a relevant empty location
+		ZONE_BLACK = 0b001u, // a relevant black stone
+		ZONE_WHITE = 0b010u, // a relevant white stone
+		IRRELEVANT = 0b100u, // a irrelevant piece
 	};
 	/**
 	 * get the piece at (x, y)
+	 * this function will NOT correct incorrectly set bitmaps,
+	 * e.g., will return (ZONE_BLACK | ZONE_WHITE) when both black and white are set
 	 * @param
 	 *  x the x-axis position (A-G) in decimal number (0-6)
 	 *  y the y-axis position (1-7) in decimal number (0-6)
@@ -99,6 +101,8 @@ public:
 	}
 	/**
 	 * set the piece at (x, y)
+	 * this function will NOT correct incorrectly piece type,
+	 * e.g., will set both black and white for (ZONE_BLACK | ZONE_WHITE)
 	 * @param
 	 *  x the x-axis position (A-G) in decimal number (0-6)
 	 *  y the y-axis position (1-7) in decimal number (0-6)
