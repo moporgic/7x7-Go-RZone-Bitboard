@@ -3,7 +3,7 @@
 #include <algorithm>
 
 /**
- * Bitboard for 7x7 Go with R-Zone support
+ * 7x7 Go bitboard with R-Zone support
  *
  *  +---------------+
  * 7| + + + + + + + | G7 is the highest bit, i.e., the 49th low bit
@@ -18,9 +18,21 @@
  */
 class Zone7x7Bitboard {
 public:
+	/**
+	 * common definitions
+	 */
 	using u64 = unsigned long long int;
 	using u32 = unsigned int;
 
+	static constexpr u64 BOARD_MASK = (-1ull >> 15);
+	static constexpr u64 ROW_MASK(u32 y) { return 0b1111111ull << (y * 7); }
+	static constexpr u64 COL_MASK(u32 x) { return 0b0000001000000100000010000001000000100000010000001ull << x; }
+	static constexpr u64 BIT_MASK(u32 x, u32 y) { return 1ull << (y * 7 + x); }
+
+public:
+	/**
+	 * bitmaps are public for easy access, be careful
+	 */
 	u64 zone;  // zone-relevant pieces
 	u64 black; // black pieces in zone
 	u64 white; // white pieces in zone
@@ -28,6 +40,7 @@ public:
 public:
 	/**
 	 * construct a bitboard with R-zone and black/white stones
+	 * note that the provided bitmaps should NOT contain any set bits higher than the 49th bit
 	 * @param
 	 *  zone  the bitmap of R-zone
 	 *  black the bitmap of black stones
@@ -36,11 +49,12 @@ public:
 	inline constexpr Zone7x7Bitboard(u64 zone, u64 black, u64 white) : zone(zone), black(black), white(white) {}
 	/**
 	 * construct a bitboard with black/white stones, with all 49 locations set as relevant
+	 * note that the provided bitmaps should NOT contain any set bits higher than the 49th bit
 	 * @param
 	 *  black the bitmap of black stones
 	 *  white the bitmap of white stones
 	 */
-	inline constexpr Zone7x7Bitboard(u64 black, u64 white) : Zone7x7Bitboard((1ull << 49) - 1, black, white) {}
+	inline constexpr Zone7x7Bitboard(u64 black, u64 white) : Zone7x7Bitboard(BOARD_MASK, black, white) {}
 	/**
 	 * construct an empty bitboard, with all 49 locations set as irrelevant
 	 * note: to construct a "relevant" empty board, use Zone7x7Bitboard(0, 0) instead
@@ -56,7 +70,7 @@ public:
 	inline constexpr Zone7x7Bitboard operator &(const Zone7x7Bitboard& z) const { return {zone & z.zone, black & z.black, white & z.white}; }
 	inline constexpr Zone7x7Bitboard operator |(const Zone7x7Bitboard& z) const { return {zone | z.zone, black | z.black, white | z.white}; }
 	inline constexpr Zone7x7Bitboard operator ^(const Zone7x7Bitboard& z) const { return {zone ^ z.zone, black ^ z.black, white ^ z.white}; }
-	inline constexpr Zone7x7Bitboard operator ~() const { return {~zone & (-1ull >> 15), ~black & (-1ull >> 15), ~white & (-1ull >> 15)}; }
+	inline constexpr Zone7x7Bitboard operator ~() const { return {~zone & BOARD_MASK, ~black & BOARD_MASK, ~white & BOARD_MASK}; }
 
 	inline constexpr Zone7x7Bitboard& operator &=(u64 x) { return operator =(operator &(x)); }
 	inline constexpr Zone7x7Bitboard& operator |=(u64 x) { return operator =(operator |(x)); }
@@ -87,7 +101,7 @@ public:
 	};
 	/**
 	 * get the piece at (x, y)
-	 * this function will NOT correct incorrectly set bitmaps,
+	 * this function will NOT correct wrong bitmaps,
 	 * e.g., will return (ZONE_BLACK | ZONE_WHITE) when both black and white are set
 	 * @param
 	 *  x the x-axis position (A-G) in decimal number (0-6)
@@ -101,7 +115,7 @@ public:
 	}
 	/**
 	 * set the piece at (x, y)
-	 * this function will NOT correct incorrectly piece type,
+	 * this function will NOT correct wrong arguments,
 	 * e.g., will set both black and white for (ZONE_BLACK | ZONE_WHITE)
 	 * @param
 	 *  x the x-axis position (A-G) in decimal number (0-6)
